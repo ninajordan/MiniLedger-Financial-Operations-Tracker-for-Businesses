@@ -8,7 +8,7 @@ const router = Router();
 router.post("/", async (req, res) => {
   const { userId, amount, category, description, date } = req.body;
 
-  if (!userId || !amount || !category) {
+  if (!userId || amount === undefined || !category) {
     return res
       .status(400)
       .json({ error: "userId, amount, and category are required." });
@@ -20,12 +20,22 @@ router.post("/", async (req, res) => {
 
   try {
     const db = getDB();
+    // date validation
+    let parsedDate = new Date();
+      if (date) {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) {
+          return res.status(400).json({ error: "Date format invalid." });
+        }
+        parsedDate = d;
+      }
+    
     const result = await db.collection("income").insertOne({
       userId,
       amount: Number(amount),
       category,
-      description: description || "",
-      date: date ? new Date(date) : new Date(),
+      description: description || "",   
+      date: parsedDate,
       createdAt: new Date(),
     });
 
@@ -87,7 +97,13 @@ router.put("/:id", async (req, res) => {
     }
     if (category) updates.category = category;
     if (description !== undefined) updates.description = description;
-    if (date) updates.date = new Date(date);
+    if (date) {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ error: "Invalid date format." });
+      }
+      updates.date = d;
+    }
 
     const result = await db
       .collection("income")
